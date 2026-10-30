@@ -41,14 +41,20 @@ source .venv/bin/activate            # fish: source .venv/bin/activate.fish
 pip install requests
 ```
 
-Put your API key in a `.env` file next to `Lol_db.py`. Start by copying the example
-file:
+The first time you run the program, it asks for your Riot API key and saves it in a
+`.env` file next to `Lol_db.py`:
 
-```bash
-cp .env.example .env                 # Windows: copy .env.example .env
+```
+No hay una API key de Riot guardada.
+Pega tu API key (Enter para salir): RGAPI-...
+  Key guardada en .../.env
 ```
 
-Then edit `.env`:
+Development keys expire every 24 hours. When Riot rejects the saved key, the program
+asks for a new one, replaces the old one in `.env`, and continues where it left off.
+You don't need to restart it.
+
+You can also write `.env` by hand (see `.env.example`):
 
 ```
 RIOT_API_KEY=RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
@@ -56,9 +62,6 @@ RIOT_API_KEY=RGAPI-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 
 `.env` is listed in `.gitignore`, so your key is never committed. If the
 `RIOT_API_KEY` environment variable is set, it takes priority over the file.
-
-> Development keys expire every 24 hours. If the program stops with
-> *"la API key es inválida o expiró"*, generate a new key and replace it in `.env`.
 
 ## Usage
 

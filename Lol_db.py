@@ -17,7 +17,8 @@ Al terminar genera reportes/<Nombre>.html (necesita dashboard.py en la misma car
 Con --last-match genera reportes/<Nombre>_ultima_partida.html (necesita ultima_partida.py).
 
 Requiere:  la librería requests (si falta, el programa ofrece instalarla con pip)
-           y tu API key de Riot en el archivo .env (RIOT_API_KEY=RGAPI-...), junto a este script.
+           y una API key de Riot. Si falta o expiró, el programa la pide y la guarda
+           en el archivo .env junto a este script (RIOT_API_KEY=RGAPI-...).
 Cada jugador tiene su base de datos en bases_de_datos/<Nombre>.db, y sus tablas
 en CSV en reportes/. Si cortas la descarga (Ctrl+C), lo descargado queda guardado
 y se retoma desde ahí la próxima vez.
@@ -79,18 +80,56 @@ REPORT_DIR = BASE / "reportes"
 ROLES = {"TOP": "Top", "JUNGLE": "Jungla", "MIDDLE": "Mid", "BOTTOM": "ADC", "UTILITY": "Support"}
 
 
+ENV_FILE = BASE / ".env"
+
+
 def load_api_key():
     """Lee RIOT_API_KEY del archivo .env junto a este script.
     Si la variable de entorno RIOT_API_KEY existe, tiene prioridad."""
     if os.environ.get("RIOT_API_KEY"):
         return os.environ["RIOT_API_KEY"].strip()
-    env = BASE / ".env"
-    if env.exists():
-        for line in env.read_text(encoding="utf-8-sig").splitlines():
+    if ENV_FILE.exists():
+        for line in ENV_FILE.read_text(encoding="utf-8-sig").splitlines():
             key, _, value = line.partition("=")
             if key.strip() == "RIOT_API_KEY":
                 return value.strip().strip("\"'")
     return ""
+
+
+def save_api_key(key):
+    """Guarda la key en .env, reemplazando la anterior y conservando las demás líneas."""
+    lines = ENV_FILE.read_text(encoding="utf-8-sig").splitlines() if ENV_FILE.exists() else []
+    lines = [line for line in lines if line.partition("=")[0].strip() != "RIOT_API_KEY"]
+    lines.append(f"RIOT_API_KEY={key}")
+    ENV_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    try:
+        os.chmod(ENV_FILE, 0o600)   # solo tu usuario puede leerla (no aplica en Windows)
+    except OSError:
+        pass
+
+
+def ask_api_key(reason):
+    """Pide una API key nueva, la guarda en .env y la usa desde ya."""
+    global API_KEY
+    print(f"\n{reason}")
+    print("Genera una en https://developer.riotgames.com (las de desarrollo duran 24 horas).")
+    while True:
+        try:
+            key = input("Pega tu API key (Enter para salir): ").strip().strip("\"'")
+        except EOFError:
+            key = ""
+        if not key:
+            sys.exit("Sin API key no se puede usar la API de Riot. "
+                     "Usa --sin-descargar para analizar lo que ya está guardado.")
+        if key.startswith("RGAPI-"):
+            break
+        print("  Eso no parece una key de Riot: debe empezar con RGAPI-")
+    API_KEY = key
+    save_api_key(key)
+    print(f"  Key guardada en {ENV_FILE}\n")
+    if os.environ.get("RIOT_API_KEY"):
+        print("  Aviso: la variable de entorno RIOT_API_KEY tiene prioridad sobre .env. "
+              "Bórrala para que la próxima vez se use la key guardada.\n")
 
 
 API_KEY = load_api_key()   # genera una en developer.riotgames.com
@@ -161,8 +200,8 @@ def get(url, params=None):
             time.sleep(5)
             continue
         if r.status_code in (401, 403):
-            sys.exit("\nError: la API key es inválida o expiró. "
-                     "Genera una nueva en developer.riotgames.com y actualiza el archivo .env")
+            ask_api_key("La API key es inválida o expiró.")
+            continue
         if r.status_code == 404:
             return None
         r.raise_for_status()
@@ -537,8 +576,7 @@ def main():
     args = ap.parse_args()
 
     if not args.sin_descargar and not API_KEY:
-        sys.exit("Falta la API key de Riot. Genera una en developer.riotgames.com y guárdala en "
-                 f"{BASE / '.env'} así:\n  RIOT_API_KEY=RGAPI-...\n(o usa --sin-descargar).")
+        ask_api_key("No hay una API key de Riot guardada.")
     name, tag = ask_player(args.jugador)
 
     if args.sin_descargar:
