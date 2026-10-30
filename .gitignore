@@ -1,0 +1,16 @@
+# Datos generados
+bases_de_datos/
+reportes/
+*.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# IDE
+.idea/
+.vscode/
+
+# Secretos
+.env
