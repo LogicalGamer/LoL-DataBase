@@ -28,7 +28,8 @@ The program's messages and reports are in Spanish.
 ## Requirements
 
 - Python 3.10 or newer
-- [`requests`](https://pypi.org/project/requests/)
+- [`requests`](https://pypi.org/project/requests/). If it's missing when you run the
+  program, it offers to install it with pip for the same Python you're using.
 - A Riot API key from <https://developer.riotgames.com>
 
 ## Setup

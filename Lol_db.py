@@ -16,8 +16,8 @@ Uso:
 Al terminar genera reportes/<Nombre>.html (necesita dashboard.py en la misma carpeta).
 Con --last-match genera reportes/<Nombre>_ultima_partida.html (necesita ultima_partida.py).
 
-Requiere:  pip install requests  y tu API key de Riot en el archivo .env
-           (RIOT_API_KEY=RGAPI-...), junto a este script.
+Requiere:  la librería requests (si falta, el programa ofrece instalarla con pip)
+           y tu API key de Riot en el archivo .env (RIOT_API_KEY=RGAPI-...), junto a este script.
 Cada jugador tiene su base de datos en bases_de_datos/<Nombre>.db, y sus tablas
 en CSV en reportes/. Si cortas la descarga (Ctrl+C), lo descargado queda guardado
 y se retoma desde ahí la próxima vez.
@@ -33,7 +33,36 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-import requests
+
+def ensure_requests():
+    """Importa requests; si falta, ofrece instalarlo con pip para este mismo Python."""
+    try:
+        import requests
+        return requests
+    except ImportError:
+        pass
+    print("Falta la librería 'requests', necesaria para usar la API de Riot.")
+    try:
+        answer = input("¿Instalarla ahora con pip? [S/n]: ").strip().lower()
+    except EOFError:
+        answer = "n"
+    if answer not in ("", "s", "si", "sí", "y", "yes"):
+        sys.exit(f"Instálala con:  \"{sys.executable}\" -m pip install requests")
+
+    import importlib
+    import subprocess
+    if subprocess.call([sys.executable, "-m", "pip", "install", "requests"]) != 0:
+        sys.exit("\nNo se pudo instalar con pip.\n"
+                 f"  - Si dice 'No module named pip':  \"{sys.executable}\" -m ensurepip\n"
+                 "  - Si dice 'externally-managed-environment' (Linux), usa un entorno virtual:\n"
+                 "      python -m venv .venv  y corre el programa con .venv/bin/python")
+    importlib.invalidate_caches()
+    import requests
+    print()
+    return requests
+
+
+requests = ensure_requests()
 
 # ───────────── CONFIGURACIÓN ─────────────
 TAG_POR_DEFECTO = "LAN"    # se usa si escribes el nombre sin #TAG y das Enter al pedir el tag
